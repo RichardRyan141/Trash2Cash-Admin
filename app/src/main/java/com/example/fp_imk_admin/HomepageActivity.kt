@@ -46,11 +46,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fp_imk_admin.data.User
-import com.example.fp_imk_admin.data.getUserData
 import com.example.fp_imk_admin.manajemen_kategori.BuatKategoriActivity
 import com.example.fp_imk_admin.manajemen_kategori.DaftarKategoriActivity
 import com.example.fp_imk_admin.manajemen_user.RegisterActivity
+import com.example.fp_imk_admin.manajemen_user.UserListActivity
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.runtime.collectAsState
 
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,36 +65,20 @@ class HomepageActivity : ComponentActivity() {
 
 @Composable
 fun HomeScreen() {
-    val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val user = auth.currentUser
     val uid = user?.uid
     var user_role = ""
-    val userData = remember { mutableStateOf<User?>(null) }
+    val userDataState = UserSessionManager.userData.collectAsState()
+    val userData = userDataState.value
 
     LaunchedEffect(uid) {
         if (uid != null) {
-            getUserData(
-                uid = uid,
-                onSuccess = { user ->
-                    Log.d("FirebaseUser", "User: $user")
-                    userData.value = user
-                    user?.username?.let { username ->
-                        saveStringLocally(context, "username", username)
-                    }
-                    user?.role?.let {role ->
-                        user_role = role
-                        saveStringLocally(context, "role", role)
-                    }
-                },
-                onError = { error ->
-                    Log.e("Firebase", "Failed to load user data", error)
-                }
-            )
+            UserSessionManager.getUserData(uid = uid)
         }
     }
 
-    user_role = "superadmin"
+    user_role = userData?.role ?: "employee"
 
     Column(modifier = Modifier.fillMaxSize()) {
         header(userData)
@@ -117,11 +102,10 @@ fun HomeScreen() {
             }
         }
     }
-
 }
 
 @Composable
-fun header(userData: MutableState<User?>) {
+fun header(userData: User?) {
     var context = LocalContext.current
     Box(
         modifier = Modifier
@@ -163,13 +147,13 @@ fun header(userData: MutableState<User?>) {
 
                 Column {
                     Text(
-                        text = userData.value?.username ?: "username",
+                        text = userData?.username ?: "username",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Text(
-                        text = userData.value?.email ?: "user@email.com",
+                        text = userData?.email ?: "user@email.com",
                         fontSize = 16.sp,
                         color = Color.White
                     )
@@ -177,6 +161,7 @@ fun header(userData: MutableState<User?>) {
             }
 
             IconButton(onClick = {
+                UserSessionManager.logout()
                 context.startActivity(Intent(context, MainActivity::class.java))
             }) {
                 Icon(
@@ -193,13 +178,9 @@ fun header(userData: MutableState<User?>) {
 @Composable
 fun manajemen_user(user_role: String) {
     val items = mutableListOf(
-        Triple(Color.Black, "Buat User", "user"),
-        Triple(Color.Green, "Buat Karyawan", "employee")
+        Triple(Color.Black, "Buat Pengguna", RegisterActivity::class.java),
+        Triple(Color.Green, "Daftar Pengguna", UserListActivity::class.java),
     )
-
-    if (user_role == "superadmin") {
-        items.add(Triple(Color.Blue, "Buat Admin", "admin"))
-    }
 
     val arrangement = if (items.size == 2) {
         Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally)
@@ -232,8 +213,8 @@ fun manajemen_user(user_role: String) {
                 horizontalArrangement = arrangement,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                items.forEach { (color, label, role) ->
-                    manajemen_user_item(color, label, role)
+                items.forEach { (color, label, target) ->
+                    manajemen_user_item(color, label, target)
                 }
             }
         }
@@ -241,15 +222,13 @@ fun manajemen_user(user_role: String) {
 }
 
 @Composable
-fun manajemen_user_item(image_color: Color, text: String, role: String) {
+fun manajemen_user_item(image_color: Color, text: String, target: Class<*>) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
             .padding(8.dp)
             .clickable {
-                val intent = Intent(context, RegisterActivity::class.java)
-                intent.putExtra("role", role)
-                context.startActivity(intent)
+                context.startActivity(Intent(context, target))
             },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

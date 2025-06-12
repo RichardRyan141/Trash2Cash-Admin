@@ -23,10 +23,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.fp_imk_admin.HomepageActivity
 import com.example.fp_imk_admin.R
+import com.example.fp_imk_admin.UserSessionManager
 import com.example.fp_imk_admin.data.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
@@ -34,15 +37,76 @@ import com.google.firebase.database.FirebaseDatabase
 class RegisterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val role = intent.getStringExtra("role") ?: "user"
         setContent {
-            RegisterScreen(role)
+            RegisterScreen()
         }
     }
 }
 
+@Preview(showBackground = true)
 @Composable
-fun RegisterScreen(role: String) {
+fun RegisterPreview() {
+    RegisterScreen()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RoleDropdown(selectedRole: String, onRoleSelected: (String) -> Unit) {
+    val roles = listOf("user", "employee", "admin")
+    val roleDisplay = listOf("User", "Karyawan", "Admin")
+    var textDisp by remember { mutableStateOf("User") }
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.offset(y=-15.dp).wrapContentSize(Alignment.TopStart)
+    ) {
+        TextField(
+            value = textDisp,
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            textStyle = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.Bold),
+            modifier = Modifier
+                .menuAnchor(),
+            colors = TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                disabledIndicatorColor = Color.Transparent,
+                cursorColor = Color.Black,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                focusedTextColor = Color.Black,
+                unfocusedTextColor = Color.Black,
+                disabledTextColor = Color.Gray
+            )
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            roles.zip(roleDisplay).forEach { (role, disp) ->
+                DropdownMenuItem(
+                    text = { Text(disp) },
+                    onClick = {
+                        onRoleSelected(role)
+                        textDisp = disp
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RegisterScreen() {
     val context = LocalContext.current
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -51,6 +115,7 @@ fun RegisterScreen(role: String) {
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPassword by remember { mutableStateOf("") }
     var confirmPasswordVisible by remember{ mutableStateOf(false) }
+    var role by remember { mutableStateOf("User") }
 
     fun isFormValid(): Boolean {
         val passwordValid = password.length >= 8 && password.any { it.isDigit() }
@@ -61,52 +126,20 @@ fun RegisterScreen(role: String) {
     }
 
     fun registerUser() {
-        val database = FirebaseDatabase.getInstance()
-        val auth = FirebaseAuth.getInstance()
-        val usersRef = database.getReference("users")
-
-        if (!isFormValid()) {
-            Toast.makeText(context, "Lengkapi semua data dan ceklis persetujuan", Toast.LENGTH_SHORT).show()
-            return
+        UserSessionManager.registerUser(
+            username = username,
+            email = email,
+            password = password,
+            noTelp = noTelp,
+            role = role
+        ) { success, message ->
+            if (success) {
+                Toast.makeText(context, "Registrasi berhasil!", Toast.LENGTH_SHORT).show()
+                context.startActivity(Intent(context, HomepageActivity::class.java))
+            } else {
+                Toast.makeText(context, message ?: "Registrasi gagal", Toast.LENGTH_LONG).show()
+            }
         }
-
-        usersRef.orderByChild("noTelp").equalTo(noTelp).get()
-            .addOnSuccessListener { snapshot ->
-                if (snapshot.exists()) {
-                    Toast.makeText(context, "Nomor telepon sudah digunakan", Toast.LENGTH_SHORT).show()
-                } else {
-                    auth.createUserWithEmailAndPassword(email, password)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                val firebaseUser = auth.currentUser
-                                val uid = firebaseUser?.uid ?: return@addOnCompleteListener
-                                val user = User(
-                                    username = username,
-                                    email = email,
-                                    noTelp = noTelp,
-                                    balance = 0,
-                                    role = role
-                                )
-
-                                usersRef.child(uid).setValue(user)
-                                    .addOnSuccessListener {
-                                        Toast.makeText(context, "Registrasi berhasil!", Toast.LENGTH_SHORT).show()
-                                        context.startActivity(Intent(context, HomepageActivity::class.java))
-                                    }
-                                    .addOnFailureListener {
-                                        Toast.makeText(context, "Gagal menyimpan data user", Toast.LENGTH_SHORT).show()
-                                    }
-                            } else {
-                                Log.d("Registrasi gagal", "${task.exception?.message}")
-                                Toast.makeText(context, "Registrasi gagal: ${task.exception?.message}", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e("FirebaseQuery", "Query failed", e)
-                Toast.makeText(context, "Gagal memeriksa nomor telepon: ${e.message}", Toast.LENGTH_LONG).show()
-            }
     }
 
     Column(
@@ -125,14 +158,20 @@ fun RegisterScreen(role: String) {
 
         Spacer(modifier = Modifier.height(30.dp))
 
-        Text(
-            text = "Buat ${role.replaceFirstChar { it.uppercaseChar() }}",
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
+        Row {
+            Text(
+                text = "Buat ",
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            RoleDropdown(
+                selectedRole = role,
+                onRoleSelected = { role = it }
+            )
+        }
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         OutlinedTextField(
             value = username,

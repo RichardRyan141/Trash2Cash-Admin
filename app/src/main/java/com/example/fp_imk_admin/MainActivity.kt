@@ -50,45 +50,22 @@ fun LoginScreen() {
     fun isFormValid(): Boolean {
         val passwordValid = password.length >= 8 && password.any { it.isDigit() }
         val fieldsFilled = email.isNotBlank() && password.isNotBlank()
-//        return fieldsFilled && passwordValid
-        return true
+        return fieldsFilled && passwordValid
     }
 
     fun loginUser() {
-//        if(!isFormValid()) {
-//            Toast.makeText(context, "Email dan password harus diisi", Toast.LENGTH_SHORT).show()
-//            return;
-//        }
-//
-//        val auth = FirebaseAuth.getInstance()
-//
-//        auth.signInWithEmailAndPassword(email, password)
-//            .addOnCompleteListener { task ->
-//                if (task.isSuccessful) {
-//                    val user = auth.currentUser
-//                    val uid = user?.uid ?: return@addOnCompleteListener
-//                    val dbRef = FirebaseDatabase.getInstance().getReference("users").child(uid)
-//
-//                    dbRef.get()
-//                        .addOnSuccessListener { snapshot ->
-//                            val role = snapshot.child("role").getValue(String::class.java)
-//                            if (role != "user") {
-//                                context.startActivity(Intent(context, HomepageActivity::class.java))
-//                            } else {
-//                                auth.signOut()
-//                                Toast.makeText(context, "Login tidak diizinkan untuk user di sini", Toast.LENGTH_SHORT).show()
-//                            }
-//                        }
-//                        .addOnFailureListener {
-//                            auth.signOut()
-//                            Toast.makeText(context, "Gagal memverifikasi role pengguna", Toast.LENGTH_SHORT).show()
-//                        }
-//                } else {
-//                    Log.e("Login Gagal", "${task.exception?.message}")
-//                    Toast.makeText(context, "Login gagal: Email atau password salah", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-        context.startActivity(Intent(context, HomepageActivity::class.java))
+        if (!isFormValid()) {
+            Toast.makeText(context, "Email dan password harus diisi", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        UserSessionManager.login(email, password) { success, errorMessage ->
+            if (success) {
+                context.startActivity(Intent(context, HomepageActivity::class.java))
+            } else {
+                Toast.makeText(context, errorMessage ?: "Login gagal", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     Column(
