@@ -1,0 +1,276 @@
+package com.example.fp_imk_admin.manajemen_transaksi
+
+import android.app.Activity
+import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import com.example.fp_imk_admin.LocationSessionManager
+import com.example.fp_imk_admin.TransactionSessionManager
+import com.example.fp_imk_admin.UserSessionManager
+import com.example.fp_imk_admin.data.Location
+import com.example.fp_imk_admin.data.Transaction
+import com.example.fp_imk_admin.data.User
+import com.example.fp_imk_admin.data.dummyLocs
+
+class CreateTransactionActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            CreateTransactionScreen()
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CreateTransactionPreview() {
+    CreateTransactionScreen()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateTransactionScreen(role: String = "admin") {
+    val context = LocalContext.current
+    var noTelp by remember { mutableStateOf("") }
+    var user by remember {mutableStateOf(User())}
+    var userFound by remember { mutableStateOf(false) }
+
+    var locations by remember { mutableStateOf<List<Location>>(emptyList()) }
+    var selectedLocation by remember { mutableStateOf<Location?>(null) }
+    var expanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        LocationSessionManager.getAllLocations(
+            onSuccess = { fetchedLocations ->
+                locations = if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
+                if (fetchedLocations.isNotEmpty()) {
+                    selectedLocation = locations[0]
+                }
+            },
+            onError = {
+            }
+        )
+    }
+
+    fun buatTransaksi() {
+        var loc_id = ""
+        if(role != "karyawan") {
+            loc_id = selectedLocation?.id ?: ""
+        } else {
+            // logged in user's lokasiID
+        }
+        val trans = Transaction(
+            masuk = true,
+            sumber = "",
+            tujuan = user.username,
+            loc_id = loc_id
+        )
+        TransactionSessionManager.addTransaction(trans) { success, message ->
+            if (success) {
+                Toast.makeText(context, "Transaksi berhasil dibuat", Toast.LENGTH_SHORT).show()
+                (context as? ComponentActivity)?.finish()
+            } else {
+                Toast.makeText(context, message ?: "Terjadi kesalahan", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color(0xFFF1EBEB),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Buat Transaksi",
+                        color = Color.Black,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { (context as Activity?)?.finish() }) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(horizontal = 12.dp, vertical = 16.dp)
+                .fillMaxWidth()
+        ) {
+            if (role != "karyawan") {
+                Text(
+                    text = "Lokasi",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                LocationDropdown(
+                    locations = locations,
+                    selectedLocation = selectedLocation,
+                    onLocationSelected = { selectedLocation = it }
+                )
+            }
+            Spacer(modifier = Modifier.height(30.dp))
+            Text(
+                text = "Data User",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = noTelp,
+                    onValueChange = { noTelp = it },
+                    label = { Text("Nomor Telepon User") },
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(onClick = {
+                    UserSessionManager.getUserDataFromPhone(noTelp) { fetchedUser ->
+                        if (fetchedUser != null) {
+                            user = fetchedUser
+                            userFound = true
+                        } else {
+                            userFound = false
+                        }
+                    }
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        modifier = Modifier.height(32.dp)
+                    )
+                }
+            }
+            if (userFound) {
+                OutlinedTextField(
+                    value = user.username,
+                    onValueChange = {},
+                    label = { Text("Nama User") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = Color.Black,
+                        disabledLabelColor = Color.DarkGray,
+                        disabledBorderColor = Color.Gray,
+                        disabledLeadingIconColor = Color.Black
+                    )
+                )
+            } else {
+                if (noTelp.isNotEmpty()) {
+                    Text(
+                        text = "User tidak ditemukan",
+                        color = Color.Red,
+                        modifier = Modifier.padding(top = 8.dp),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Button(
+                onClick = {
+                    buatTransaksi()
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical=24.dp),
+                enabled = userFound
+            ) {
+                Text("Buat Transaksi")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LocationDropdown(
+    locations: List<Location>,
+    selectedLocation: Location?,
+    onLocationSelected: (Location) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        TextField(
+            value = selectedLocation?.namaLokasi ?: "Pilih lokasi",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Lokasi") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.menuAnchor().fillMaxWidth()
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            locations.forEach { location ->
+                DropdownMenuItem(
+                    text = { Text(location.namaLokasi) },
+                    onClick = {
+                        onLocationSelected(location)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}

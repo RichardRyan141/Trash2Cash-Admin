@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fp_imk_admin.CategorySessionManager
 import com.example.fp_imk_admin.HomepageActivity
 import com.example.fp_imk_admin.data.Category
 import com.example.fp_imk_admin.data.User
@@ -67,37 +68,17 @@ fun BuatKategoriScreen() {
     }
 
     fun buatKategori() {
-        val database = FirebaseDatabase.getInstance()
-        val categoriesRef = database.getReference("categories")
-
-        if (!isFormValid()) {
-            Toast.makeText(context, "Lengkapi semua data dan ceklis persetujuan", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         val hargaInt = hargaPerKg.toInt()
+        val category = Category(namaKategori = namaKategori.trim(), hargaPerKg = hargaInt)
 
-        categoriesRef.orderByChild("namaKategori").equalTo(namaKategori).get()
-            .addOnSuccessListener { snapshot ->
-                if (snapshot.exists()) {
-                    Toast.makeText(context, "Nama kategori sudah digunakan", Toast.LENGTH_SHORT).show()
-                } else {
-                    val newRef = categoriesRef.push()
-                    val category = Category(namaKategori = namaKategori, hargaPerKg = hargaInt)
-                    newRef.setValue(category)
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "Kategori berhasil dibuat", Toast.LENGTH_SHORT).show()
-                            (context as? ComponentActivity)?.finish()
-                        }
-                        .addOnFailureListener { e ->
-                            Toast.makeText(context, "Gagal menyimpan kategori: ${e.message}", Toast.LENGTH_LONG).show()
-                        }
-                }
+        CategorySessionManager.createCategory(category) { success, message ->
+            if (success) {
+                Toast.makeText(context, "Kategori berhasil dibuat", Toast.LENGTH_SHORT).show()
+                (context as? ComponentActivity)?.finish()
+            } else {
+                Toast.makeText(context, message ?: "Terjadi kesalahan", Toast.LENGTH_LONG).show()
             }
-            .addOnFailureListener { e ->
-                Log.e("FirebaseQuery", "Query failed", e)
-                Toast.makeText(context, "Gagal mengecek nama kategori: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+        }
     }
 
     Column(modifier = Modifier
@@ -157,10 +138,9 @@ fun BuatKategoriScreen() {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
-                onClick = {
-                    buatKategori()
-                },
+                onClick = { buatKategori() },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = isFormValid()
             ) {
                 Text("Buat Kategori")
             }

@@ -1,9 +1,7 @@
 package com.example.fp_imk_admin.manajemen_kategori
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -37,11 +35,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.fp_imk_admin.HomepageActivity
+import com.example.fp_imk_admin.CategorySessionManager
 import com.example.fp_imk_admin.data.Category
-import com.example.fp_imk_admin.data.User
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.FirebaseDatabase
 
 class EditKategoriActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,32 +65,23 @@ fun EditKategoriScreen(kategori_id: String, nama: String, harga: String) {
     }
 
     fun editKategori() {
-        val database = FirebaseDatabase.getInstance()
-        val categoryRef = database.getReference("categories").child(kategori_id)
-
-        if (!isFormValid()) {
-            Toast.makeText(context, "Lengkapi semua data dan ceklis persetujuan", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val hargaInt = hargaPerKg.toInt()
-
-        val updatedCategory = mapOf(
-            "namaKategori" to namaKategori,
-            "hargaPerKg" to hargaInt
+        val updatedCategory = Category(
+            id = kategori_id,
+            namaKategori = namaKategori,
+            hargaPerKg = hargaPerKg.toInt()
         )
 
-        categoryRef.updateChildren(updatedCategory)
-            .addOnSuccessListener {
+        CategorySessionManager.updateCategory(updatedCategory) { success, error ->
+            if (success) {
                 Toast.makeText(context, "Kategori berhasil diperbarui", Toast.LENGTH_SHORT).show()
                 (context as? ComponentActivity)?.apply {
                     setResult(Activity.RESULT_OK)
                     finish()
                 }
+            } else {
+                Toast.makeText(context, "Gagal memperbarui kategori: $error", Toast.LENGTH_LONG).show()
             }
-            .addOnFailureListener { e ->
-                Toast.makeText(context, "Gagal memperbarui kategori: ${e.message}", Toast.LENGTH_LONG).show()
-            }
+        }
     }
 
     Column(modifier = Modifier

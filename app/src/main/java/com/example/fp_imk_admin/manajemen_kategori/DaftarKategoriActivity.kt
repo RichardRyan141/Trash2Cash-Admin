@@ -22,8 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fp_imk_admin.CategorySessionManager
 import com.example.fp_imk_admin.data.Category
-import com.example.fp_imk_admin.data.getCategoryList
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -43,7 +43,7 @@ class DaftarKategoriActivity : ComponentActivity() {
                 contract = ActivityResultContracts.StartActivityForResult()
             ) { result ->
                 if (result.resultCode == Activity.RESULT_OK) {
-                    getCategoryList(
+                    CategorySessionManager.getCategoryList(
                         onSuccess = { fetchedCategories -> categories = fetchedCategories },
                         onError = { error ->
                             errorMessage = error.message
@@ -54,7 +54,7 @@ class DaftarKategoriActivity : ComponentActivity() {
             }
 
             LaunchedEffect(Unit) {
-                getCategoryList(
+                CategorySessionManager.getCategoryList(
                     onSuccess = { fetchedCategories -> categories = fetchedCategories },
                     onError = { error ->
                         errorMessage = error.message

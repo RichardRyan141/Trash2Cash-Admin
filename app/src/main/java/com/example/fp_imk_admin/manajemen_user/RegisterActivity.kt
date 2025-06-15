@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
@@ -28,11 +29,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.fp_imk_admin.HomepageActivity
+import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.R
 import com.example.fp_imk_admin.UserSessionManager
+import com.example.fp_imk_admin.data.Location
 import com.example.fp_imk_admin.data.User
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.FirebaseDatabase
+import com.example.fp_imk_admin.data.dummyLocs
+import com.example.fp_imk_admin.manajemen_transaksi.LocationDropdown
 
 class RegisterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,7 +55,7 @@ fun RegisterPreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleDropdown(selectedRole: String, onRoleSelected: (String) -> Unit) {
-    val roles = listOf("user", "employee", "admin")
+    val roles = listOf("user", "karyawan", "admin")
     val roleDisplay = listOf("User", "Karyawan", "Admin")
     var textDisp by remember { mutableStateOf("User") }
     var expanded by remember { mutableStateOf(false) }
@@ -115,7 +118,23 @@ fun RegisterScreen() {
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPassword by remember { mutableStateOf("") }
     var confirmPasswordVisible by remember{ mutableStateOf(false) }
-    var role by remember { mutableStateOf("User") }
+    var role by remember { mutableStateOf("user") }
+    var locations by remember { mutableStateOf<List<Location>>(emptyList()) }
+    var selectedLocation by remember { mutableStateOf<Location?>(null) }
+
+
+    LaunchedEffect(Unit) {
+        LocationSessionManager.getAllLocations(
+            onSuccess = { fetchedLocations ->
+                locations = if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
+                if (fetchedLocations.isNotEmpty()) {
+                    selectedLocation = locations[0]
+                }
+            },
+            onError = {
+            }
+        )
+    }
 
     fun isFormValid(): Boolean {
         val passwordValid = password.length >= 8 && password.any { it.isDigit() }
@@ -126,13 +145,14 @@ fun RegisterScreen() {
     }
 
     fun registerUser() {
-        UserSessionManager.registerUser(
+        val user = User(
             username = username,
             email = email,
-            password = password,
             noTelp = noTelp,
-            role = role
-        ) { success, message ->
+            role = role,
+            lokasiID = selectedLocation?.id ?: ""
+        )
+        UserSessionManager.registerUser(user = user, password = password) { success, message ->
             if (success) {
                 Toast.makeText(context, "Registrasi berhasil!", Toast.LENGTH_SHORT).show()
                 context.startActivity(Intent(context, HomepageActivity::class.java))
@@ -172,6 +192,15 @@ fun RegisterScreen() {
         }
 
         Spacer(modifier = Modifier.height(10.dp))
+
+        if (role != "user") {
+            LocationDropdown(
+                locations = locations,
+                selectedLocation = selectedLocation,
+                onLocationSelected = { selectedLocation = it }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         OutlinedTextField(
             value = username,

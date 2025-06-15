@@ -3,36 +3,31 @@ package com.example.fp_imk_admin.manajemen_user
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
-import com.example.fp_imk_admin.HomepageActivity
+import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.R
 import com.example.fp_imk_admin.UserSessionManager
+import com.example.fp_imk_admin.data.Location
 import com.example.fp_imk_admin.data.User
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.FirebaseDatabase
+import com.example.fp_imk_admin.data.dummyLocs
+import com.example.fp_imk_admin.manajemen_transaksi.LocationDropdown
 
 class EditUserActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,26 +49,45 @@ fun EditUserPreview() {
 @Composable
 fun EditUserScreen(userId: String) {
     val context = LocalContext.current
+    var user by remember {mutableStateOf<User?>(null)}
 
     var username by remember { mutableStateOf("") }
+    var user_role by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var noTelp by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf("User") }
     var balance by remember { mutableStateOf(0) }
+    var lokasiID by remember { mutableStateOf("") }
 
-    var user_role = ""
-    val userDataState = UserSessionManager.userData.collectAsState()
-    val userData = userDataState.value
+    var locations by remember { mutableStateOf<List<Location>>(emptyList()) }
+    var selectedLocation by remember { mutableStateOf<Location?>(null) }
+
 
     LaunchedEffect(Unit) {
-        UserSessionManager.getUserData(uid = userId)
+        UserSessionManager.getUserData(userId) { fetchedUser ->
+            if (fetchedUser != null) {
+                user = fetchedUser
+            }
+        }
+        if(user?.role != "user") {
+            LocationSessionManager.getAllLocations(
+                onSuccess = { fetchedLocations ->
+                    locations = if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
+                    if (fetchedLocations.isNotEmpty()) {
+                        selectedLocation = locations[0]
+                    }
+                },
+                onError = {
+                }
+            )
+        }
     }
 
-    username = userData?.username ?: ""
-    email = userData?.email ?: ""
-    noTelp = userData?.noTelp ?: ""
-    user_role = userData?.role ?: "employee"
-    balance = userData?.balance ?: 0
+    username = user?.username ?: ""
+    email = user?.email ?: ""
+    noTelp = user?.noTelp ?: ""
+    user_role = user?.role ?: "employee"
+    balance = user?.balance ?: 0
+    lokasiID = user?.lokasiID ?: ""
 
     fun isFormValid(): Boolean {
         val fieldsFilled = username.isNotBlank() && email.isNotBlank()
@@ -82,14 +96,22 @@ fun EditUserScreen(userId: String) {
     }
 
     fun editUser() {
-        UserSessionManager.editUser(
-            uid = userId,
+        var loc_id = ""
+        if(user_role != "user") {
+            loc_id = selectedLocation?.id ?: ""
+        } else {
+//            loc_id =
+        }
+        val user = User(
+            id = userId,
             username = username,
             email = email,
             noTelp = noTelp,
             role = user_role,
-            balance = balance
-        ) { success, message ->
+            balance = balance,
+            lokasiID = loc_id
+        )
+        UserSessionManager.editUser(user) { success, message ->
             if (success) {
                 Toast.makeText(context, "User berhasil diupdate", Toast.LENGTH_SHORT).show()
                 context.startActivity(Intent(context, UserListActivity::class.java))
@@ -185,6 +207,14 @@ fun EditUserScreen(userId: String) {
         }
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        if(user_role != "user") {
+            LocationDropdown(
+                locations = locations,
+                selectedLocation = selectedLocation,
+                onLocationSelected = { selectedLocation = it }
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 

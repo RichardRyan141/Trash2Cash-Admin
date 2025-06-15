@@ -6,5 +6,6 @@ data class User(
     val email: String = "",
     val noTelp: String = "",
     val balance: Int = 0,
-    val role: String = "user"
+    val role: String = "user",
+    val lokasiID: String = ""
 )

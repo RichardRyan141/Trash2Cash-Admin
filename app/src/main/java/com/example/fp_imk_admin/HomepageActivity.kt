@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.Icon
@@ -52,6 +53,8 @@ import com.example.fp_imk_admin.manajemen_user.RegisterActivity
 import com.example.fp_imk_admin.manajemen_user.UserListActivity
 import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,22 +69,24 @@ class HomepageActivity : ComponentActivity() {
 @Composable
 fun HomeScreen() {
     val auth = FirebaseAuth.getInstance()
-    val user = auth.currentUser
-    val uid = user?.uid
+    val uid = auth.currentUser?.uid
+    var user by remember {mutableStateOf<User?>(null)}
     var user_role = ""
-    val userDataState = UserSessionManager.userData.collectAsState()
-    val userData = userDataState.value
 
     LaunchedEffect(uid) {
         if (uid != null) {
-            UserSessionManager.getUserData(uid = uid)
+            UserSessionManager.getUserData(uid) { fetchedUser ->
+                if (fetchedUser != null) {
+                    user = fetchedUser
+                }
+            }
         }
     }
 
-    user_role = userData?.role ?: "employee"
+    user_role = user?.role ?: "employee"
 
     Column(modifier = Modifier.fillMaxSize()) {
-        header(userData)
+        header(user)
 
         LazyColumn(
             modifier = Modifier
@@ -90,8 +95,9 @@ fun HomeScreen() {
                 .padding(bottom = 16.dp)
         ) {
             item {
+                manajemen_user()
                 if (user_role != "employee") {
-                    manajemen_user("superadmin")
+                    manajemen_lokasi()
                     laporan()
                     manajemen_kategori()
                 } else {
@@ -176,7 +182,7 @@ fun header(userData: User?) {
 }
 
 @Composable
-fun manajemen_user(user_role: String) {
+fun manajemen_user() {
     val items = mutableListOf(
         Triple(Color.Black, "Buat Pengguna", RegisterActivity::class.java),
         Triple(Color.Green, "Daftar Pengguna", UserListActivity::class.java),
@@ -242,6 +248,63 @@ fun manajemen_user_item(image_color: Color, text: String, target: Class<*>) {
             text = text,
             fontWeight = FontWeight.SemiBold,
             fontSize = 16.sp,
+            color = Color.Black
+        )
+    }
+}
+
+@Composable
+fun manajemen_lokasi() {
+    val context = LocalContext.current
+    Surface(
+        modifier = Modifier
+            .padding(start = 16.dp, end=16.dp, top=20.dp, bottom=25.dp)
+            .fillMaxWidth(),
+        shadowElevation = 8.dp,
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Lokasi",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                lokasi_item(Color.Black, "Tambah Lokasi")
+                lokasi_item(Color.Green, "Daftar Lokasi")
+            }
+        }
+    }
+}
+
+@Composable
+fun lokasi_item(image_color: Color, text: String) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier.padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.LocationOn,
+            contentDescription = text,
+            tint = image_color,
+            modifier = Modifier.size(48.dp).padding(bottom = 10.dp)
+        )
+        Text(
+            text = text,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
             color = Color.Black
         )
     }
