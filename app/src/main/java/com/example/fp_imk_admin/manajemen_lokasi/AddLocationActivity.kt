@@ -1,9 +1,7 @@
 package com.example.fp_imk_admin.manajemen_lokasi
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,12 +17,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,11 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fp_imk_admin.LocationSessionManager
-import com.example.fp_imk_admin.data.Category
 import com.example.fp_imk_admin.data.Location
-import com.example.fp_imk_admin.manajemen_transaksi.CreateTransactionScreen
-import com.example.fp_imk_admin.manajemen_user.RegisterActivity
-import com.google.firebase.database.FirebaseDatabase
 
 class AddLocationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,16 +64,16 @@ fun AddLocationScreen() {
     var lat by remember { mutableStateOf("") }
     var long by remember { mutableStateOf("") }
 
-    fun validCoor(coor: String): Boolean {
+    fun validCoor(coor: String, range: Double): Boolean {
         val value = coor.toDoubleOrNull()
-        val valid = value != null && value in -90.0..90.0
+        val valid = value != null && value in -range..range
         return valid
     }
 
     fun isFormValid(): Boolean {
         val fieldsFilled = namaLokasi.isNotBlank() && alamat.isNotBlank() && lat.isNotBlank() && long.isNotBlank()
-        val latValid = validCoor(lat)
-        val longValid = validCoor(long)
+        val latValid = validCoor(lat, 90.0)
+        val longValid = validCoor(long, 180.0)
 
         return fieldsFilled && latValid && longValid
     }
@@ -195,7 +186,7 @@ fun AddLocationScreen() {
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            if(!validCoor(lat)) {
+            if(!validCoor(lat, 90.0)) {
                 Text(
                     text = "Koordinat tidak valid",
                     color = MaterialTheme.colorScheme.error,
@@ -223,7 +214,7 @@ fun AddLocationScreen() {
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
-            if(!validCoor(long)) {
+            if(!validCoor(long, 180.0)) {
                 Text(
                     text = "Koordinat tidak valid",
                     color = MaterialTheme.colorScheme.error,

@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.fp_imk_admin.data.Category
 import com.example.fp_imk_admin.data.Location
 import com.example.fp_imk_admin.data.Transaction
+import com.example.fp_imk_admin.data.TransactionDetail
 import com.example.fp_imk_admin.data.User
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -157,7 +158,7 @@ object UserSessionManager {
             "noTelp" to user.noTelp,
             "role" to user.role,
             "balance" to user.balance,
-            "lokasiId" to user.lokasiID
+            "lokasiID" to user.lokasiID
         )
 
         usersRef.updateChildren(updatedUser)
@@ -184,7 +185,7 @@ object CategorySessionManager {
                 for (child in snapshot.children) {
                     val category = child.getValue(Category::class.java)
                     if (category != null) {
-                        list.add(category.copy(id = child.key))
+                        list.add(category.copy(id = child.key ?: ""))
                     }
                 }
                 onSuccess(list)
@@ -219,7 +220,7 @@ object CategorySessionManager {
                     onResult(false, "Nama kategori sudah digunakan")
                 } else {
                     val newRef = dbRef.push()
-                    val categoryWithId = category.copy(id = newRef.key)
+                    val categoryWithId = category.copy(id = newRef.key ?: "")
 
                     newRef.setValue(categoryWithId)
                         .addOnSuccessListener {
@@ -267,11 +268,31 @@ object LocationSessionManager {
                 val list = mutableListOf<Location>()
                 for (child in snapshot.children) {
                     val loc = child.getValue(Location::class.java)
+                    Log.d("LocSessManager1", "Location: $loc")
                     if (loc != null) {
+                        Log.d("LocSessManager2", "Location: ${loc.copy(id=child.key)}")
                         list.add(loc.copy(id = child.key))
                     }
                 }
                 onSuccess(list)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onError(error)
+            }
+        })
+    }
+
+    fun getLocationByID(id: String, onResult: (Location?) -> Unit, onError: (DatabaseError) -> Unit) {
+        val dbRef = FirebaseDatabase.getInstance().getReference("locations").child(id)
+        dbRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val location = snapshot.getValue(Location::class.java)
+                if (location != null) {
+                    onResult(location.copy(id = snapshot.key))
+                } else {
+                    onResult(null)
+                }
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -310,14 +331,130 @@ object LocationSessionManager {
 object TransactionSessionManager {
     fun addTransaction(trans: Transaction, onResult: (Boolean, String?) -> Unit) {
         val dbRef = FirebaseDatabase.getInstance().getReference("transactions")
-
         val newRef = dbRef.push()
-        newRef.setValue(trans)
+        val generatedId = newRef.key
+
+        if (generatedId == null) {
+            onResult(false, "Gagal menghasilkan ID referensi")
+            return
+        }
+
+        val transactionWithRef = trans.copy(
+            noRef = generatedId,
+            sender_id = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+        )
+
+        newRef.setValue(transactionWithRef)
             .addOnSuccessListener {
                 onResult(true, null)
             }
             .addOnFailureListener { e ->
                 onResult(false, "Gagal menyimpan transaksi: ${e.message}")
+            }
+    }
+
+    fun getTransactionByID(id: String, onResult: (Transaction?) -> Unit, onError: (DatabaseError) -> Unit) {
+        val dbRef = FirebaseDatabase.getInstance().getReference("transactions").child(id)
+        dbRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val trans = snapshot.getValue(Transaction::class.java)
+                if (trans != null) {
+                    onResult(trans)
+                } else {
+                    onResult(null)
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onError(error)
+            }
+        })
+    }
+
+    fun getAllTransactions(onResult: (List<Transaction>) -> Unit) {
+        val dbRef = FirebaseDatabase.getInstance().getReference("transactions")
+        dbRef.get()
+            .addOnSuccessListener { snapshot ->
+                val transactionsList = mutableListOf<Transaction>()
+                for (child in snapshot.children) {
+                    val trans = child.getValue(Transaction::class.java)
+                    val transID = child.key
+                    if (trans != null && transID != null) {
+                        transactionsList.add(trans.copy(noRef = transID))
+                    }
+                }
+                onResult(transactionsList)
+            }
+            .addOnFailureListener {
+                Log.e("Firebase", "Failed to retrieve transactions: ${it.message}")
+                onResult(emptyList())
+            }
+    }
+
+    fun getDetailsFor(transID: String, onResult: (List<TransactionDetail>) -> Unit) {
+        val dbRef = FirebaseDatabase.getInstance().getReference("transactionDetails").child(transID)
+
+        dbRef.get()
+            .addOnSuccessListener { snapshot ->
+                val detailList = mutableListOf<TransactionDetail>()
+                for (child in snapshot.children) {
+                    val detail = child.getValue(TransactionDetail::class.java)
+                    if (detail != null) {
+                        detailList.add(detail)
+                    }
+                }
+                onResult(detailList)
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Failed to get transaction details: ${e.message}")
+                onResult(emptyList())
+            }
+    }
+
+    fun addDetail(transID: String, details: List<TransactionDetail>, callback: (Boolean, String?) -> Unit) {
+        if (details.isEmpty()) {
+            callback(false, "Detail list is empty.")
+            return
+        }
+
+        val dbRef = FirebaseDatabase.getInstance().getReference("transactionDetails").child(transID)
+
+        val updates = mutableMapOf<String, Any>()
+        for (detail in details) {
+            val newKey = dbRef.push().key
+            if (newKey == null) {
+                callback(false, "Failed to generate detail key.")
+                return
+            }
+            updates[newKey] = mapOf(
+                "trans_id" to detail.trans_id,
+                "category_id" to detail.category_id,
+                "berat" to detail.berat,
+                "hargaPerKg" to detail.hargaPerKg
+            )
+        }
+
+        dbRef.setValue(updates)
+            .addOnSuccessListener {
+                callback(true, null)
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Failed to save transaction details: ${e.message}", e)
+                callback(false, "Failed to save transaction details: ${e.message}")
+            }
+    }
+
+
+    fun updateTransactionNominal(transID: String, updatedTransaction: Transaction, callback: (Boolean) -> Unit) {
+        val dbRef = FirebaseDatabase.getInstance().getReference("transactions").child(transID)
+
+        dbRef.setValue(updatedTransaction)
+            .addOnSuccessListener {
+                callback(true)
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Failed to update transaction nominal: ${e.message}", e)
+                callback(false)
             }
     }
 }

@@ -55,6 +55,11 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.fp_imk_admin.manajemen_lokasi.AddLocationActivity
+import com.example.fp_imk_admin.manajemen_lokasi.ListLocationActivity
+import com.example.fp_imk_admin.manajemen_transaksi.CompleteTransListActivity
+import com.example.fp_imk_admin.manajemen_transaksi.CreateTransactionActivity
+import com.example.fp_imk_admin.manajemen_transaksi.PendingTransListActivity
 
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -278,21 +283,25 @@ fun manajemen_lokasi() {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                lokasi_item(Color.Black, "Tambah Lokasi")
-                lokasi_item(Color.Green, "Daftar Lokasi")
+                lokasi_item(Color.Black, "Tambah Lokasi", AddLocationActivity::class.java)
+                lokasi_item(Color.Green, "Daftar Lokasi", ListLocationActivity::class.java)
             }
         }
     }
 }
 
 @Composable
-fun lokasi_item(image_color: Color, text: String) {
+fun lokasi_item(image_color: Color, text: String, target: Class<*>) {
     val context = LocalContext.current
     Column(
-        modifier = Modifier.padding(8.dp),
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable {
+                context.startActivity(Intent(context, target))
+            },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -454,8 +463,8 @@ fun manajemen_transaksi() {
                 horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                manajemen_transaksi_item(Color.Black, "Buat Transaksi Baru")
-                manajemen_transaksi_item(Color.Green, "Daftar Transaksi Pending")
+                manajemen_transaksi_item(Color.Black, "Buat Transaksi Baru", CreateTransactionActivity::class.java)
+                manajemen_transaksi_item(Color.Green, "Daftar Transaksi Pending", PendingTransListActivity::class.java)
             }
 
             Row(
@@ -463,17 +472,21 @@ fun manajemen_transaksi() {
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                manajemen_transaksi_item(Color.Blue, "Daftar Transaksi Selesai")
+                manajemen_transaksi_item(Color.Blue, "Daftar Transaksi Selesai", CompleteTransListActivity::class.java)
             }
         }
     }
 }
 
 @Composable
-fun manajemen_transaksi_item(image_color: Color, text: String) {
+fun manajemen_transaksi_item(image_color: Color, text: String, target: Class<*>) {
     val context = LocalContext.current
     Column(
-        modifier = Modifier.padding(8.dp),
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable {
+                context.startActivity(Intent(context, target))
+            },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(

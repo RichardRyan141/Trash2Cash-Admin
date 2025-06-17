@@ -42,8 +42,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LoginScreen() {
     val context = LocalContext.current
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("admin1@gmail.com") }
+    var password by remember { mutableStateOf("pass1234") }
     var passwordVisible by remember { mutableStateOf(false) }
 
 

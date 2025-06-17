@@ -11,7 +11,7 @@ data class Transaction(
     val tujuan: String = "",
     val nominal: Int = 0,
     val pesan: String = "",
-    val user_id: String = "",
+    val sender_id: String = "",
     val noRef: String = "",
     val loc_id: String = ""
 )

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,14 +75,14 @@ fun CreateTransactionScreen(role: String = "admin") {
 
     var locations by remember { mutableStateOf<List<Location>>(emptyList()) }
     var selectedLocation by remember { mutableStateOf<Location?>(null) }
-    var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         LocationSessionManager.getAllLocations(
             onSuccess = { fetchedLocations ->
                 locations = if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
-                if (fetchedLocations.isNotEmpty()) {
-                    selectedLocation = locations[0]
+                selectedLocation = locations.first()
+                if (user.lokasiID.isNotEmpty()) {
+                    selectedLocation = locations.find { it.id == user.lokasiID } ?: locations.first()
                 }
             },
             onError = {
@@ -91,25 +91,24 @@ fun CreateTransactionScreen(role: String = "admin") {
     }
 
     fun buatTransaksi() {
-        var loc_id = ""
-        if(role != "karyawan") {
-            loc_id = selectedLocation?.id ?: ""
-        } else {
-            // logged in user's lokasiID
-        }
-        val trans = Transaction(
-            masuk = true,
-            sumber = "",
-            tujuan = user.username,
-            loc_id = loc_id
-        )
-        TransactionSessionManager.addTransaction(trans) { success, message ->
-            if (success) {
-                Toast.makeText(context, "Transaksi berhasil dibuat", Toast.LENGTH_SHORT).show()
-                (context as? ComponentActivity)?.finish()
-            } else {
-                Toast.makeText(context, message ?: "Terjadi kesalahan", Toast.LENGTH_LONG).show()
+        selectedLocation?.let { loc ->
+            val trans = Transaction(
+                masuk = true,
+                sumber = loc.namaLokasi,
+                tujuan = user.id,
+                loc_id = loc.id ?: ""
+            )
+
+            TransactionSessionManager.addTransaction(trans) { success, message ->
+                if (success) {
+                    Toast.makeText(context, "Transaksi berhasil dibuat", Toast.LENGTH_SHORT).show()
+                    (context as? Activity)?.finish()
+                } else {
+                    Toast.makeText(context, message ?: "Terjadi kesalahan", Toast.LENGTH_LONG).show()
+                }
             }
+        } ?: run {
+            Toast.makeText(context, "Lokasi belum dipilih", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -130,7 +129,7 @@ fun CreateTransactionScreen(role: String = "admin") {
                 navigationIcon = {
                     IconButton(onClick = { (context as Activity?)?.finish() }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color.Black,
                             modifier = Modifier.size(36.dp)
@@ -184,8 +183,13 @@ fun CreateTransactionScreen(role: String = "admin") {
                 Button(onClick = {
                     UserSessionManager.getUserDataFromPhone(noTelp) { fetchedUser ->
                         if (fetchedUser != null) {
-                            user = fetchedUser
-                            userFound = true
+                            if (fetchedUser.role != "user") {
+                                Toast.makeText(context, "Pengguna bukan user", Toast.LENGTH_SHORT).show()
+                                userFound = false
+                            } else {
+                                user = fetchedUser
+                                userFound = true
+                            }
                         } else {
                             userFound = false
                         }
