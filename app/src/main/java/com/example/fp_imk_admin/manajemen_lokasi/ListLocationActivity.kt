@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.fp_imk_admin.LoadingScreen
 import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.UserSessionManager
 import com.example.fp_imk_admin.data.Location
@@ -85,17 +86,6 @@ class ListLocationActivity : ComponentActivity() {
                 LoadingScreen() // show loading or fallback UI
             }
         }
-    }
-}
-@Composable
-fun LoadingScreen() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Memuat lokasi...", fontSize = 20.sp)
     }
 }
 

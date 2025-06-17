@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.fp_imk_admin.HomepageActivity
+import com.example.fp_imk_admin.LoadingScreen
 import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.R
 import com.example.fp_imk_admin.UserSessionManager
@@ -36,6 +37,7 @@ import com.example.fp_imk_admin.data.Location
 import com.example.fp_imk_admin.data.User
 import com.example.fp_imk_admin.data.dummyLocs
 import com.example.fp_imk_admin.manajemen_transaksi.LocationDropdown
+import com.google.firebase.auth.FirebaseAuth
 
 class RegisterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,74 +56,88 @@ fun RegisterPreview() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RoleDropdown(selectedRole: String, onRoleSelected: (String) -> Unit) {
-    val roles = listOf("user", "karyawan", "admin")
-    val roleDisplay = listOf("User", "Karyawan", "Admin")
-    var textDisp by remember { mutableStateOf("User") }
-    var expanded by remember { mutableStateOf(false) }
+fun RoleDropdown(employeeRole: String, selectedRole: String, onRoleSelected: (String) -> Unit) {
+    if(employeeRole == "admin") {
+        var roles = listOf("user", "karyawan", "admin")
+        var roleDisplay = listOf("User", "Karyawan", "Admin")
+        var textDisp by remember { mutableStateOf("User") }
+        var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = Modifier.offset(y=-15.dp).wrapContentSize(Alignment.TopStart)
-    ) {
-        TextField(
-            value = textDisp,
-            onValueChange = {},
-            readOnly = true,
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            textStyle = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.Bold),
-            modifier = Modifier
-                .menuAnchor(),
-            colors = TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent,
-                cursorColor = Color.Black,
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                disabledTextColor = Color.Gray
-            )
-        )
-
-        ExposedDropdownMenu(
+        ExposedDropdownMenuBox(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier.offset(y = -15.dp).wrapContentSize(Alignment.TopStart)
         ) {
-            roles.zip(roleDisplay).forEach { (role, disp) ->
-                DropdownMenuItem(
-                    text = { Text(disp) },
-                    onClick = {
-                        onRoleSelected(role)
-                        textDisp = disp
-                        expanded = false
-                    }
+            TextField(
+                value = textDisp,
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                textStyle = TextStyle(fontSize = 30.sp, fontWeight = FontWeight.Bold),
+                modifier = Modifier
+                    .menuAnchor(),
+                colors = TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    cursorColor = Color.Black,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    disabledTextColor = Color.Gray
                 )
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                roles.zip(roleDisplay).forEach { (role, disp) ->
+                    DropdownMenuItem(
+                        text = { Text(disp) },
+                        onClick = {
+                            onRoleSelected(role)
+                            textDisp = disp
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
+    } else {
+        Text(
+            text = "User",
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+        onRoleSelected("user")
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen() {
-    val context = LocalContext.current
-    var username by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var noTelp by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPassword by remember { mutableStateOf("") }
-    var confirmPasswordVisible by remember{ mutableStateOf(false) }
-    var role by remember { mutableStateOf("user") }
     var locations by remember { mutableStateOf<List<Location>>(emptyList()) }
     var selectedLocation by remember { mutableStateOf<Location?>(null) }
 
+    val auth = FirebaseAuth.getInstance()
+    val uid = auth.currentUser?.uid
+    var user by remember {mutableStateOf<User?>(null)}
+
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            UserSessionManager.getUserData(uid) { fetchedUser ->
+                if (fetchedUser != null) {
+                    user = fetchedUser
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         LocationSessionManager.getAllLocations(
@@ -135,6 +151,28 @@ fun RegisterScreen() {
             }
         )
     }
+
+    if(locations.isEmpty() || user == null) {
+        LoadingScreen()
+    } else {
+        RegisterScreenContent(user!!.role, locations)
+    }
+}
+
+@Composable
+fun RegisterScreenContent(user_role: String, locations: List<Location>) {
+    val context = LocalContext.current
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var noTelp by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPassword by remember { mutableStateOf("") }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var role by remember { mutableStateOf("user") }
+
+    var selectedLocation by remember { mutableStateOf<Location?>(null) }
+    if (user_role == "karyawan") selectedLocation = locations[0]
 
     fun isFormValid(): Boolean {
         val passwordValid = password.length >= 8 && password.any { it.isDigit() }
@@ -186,6 +224,7 @@ fun RegisterScreen() {
                 color = Color.Black
             )
             RoleDropdown(
+                employeeRole = user_role,
                 selectedRole = role,
                 onRoleSelected = { role = it }
             )
@@ -193,7 +232,7 @@ fun RegisterScreen() {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (role != "user") {
+        if (role == "karyawan") {
             LocationDropdown(
                 locations = locations,
                 selectedLocation = selectedLocation,

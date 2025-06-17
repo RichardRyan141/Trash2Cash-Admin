@@ -21,8 +21,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,14 +42,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fp_imk_admin.LoadingScreen
 import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.TransactionSessionManager
+import com.example.fp_imk_admin.UserSearchDropdown
 import com.example.fp_imk_admin.UserSessionManager
 import com.example.fp_imk_admin.data.Location
 import com.example.fp_imk_admin.data.Transaction
 import com.example.fp_imk_admin.data.User
 import com.example.fp_imk_admin.data.dummyLocs
-import com.example.fp_imk_admin.manajemen_lokasi.LoadingScreen
 import com.google.firebase.auth.FirebaseAuth
 
 class CompleteTransListActivity : ComponentActivity() {
@@ -118,6 +117,10 @@ fun CompleteTransListScreen(
     var selectedLocation by remember { mutableStateOf<Location?>(locList[0]) }
 
     val currUser: User = userList.find { it.id == uid } ?: userList.first()
+
+    if (currUser.role == "karyawan") {
+        selectedLocation = locList.find { it.id == currUser.lokasiID }
+    }
 
     var filteredTransactions = if (selectedUser != null) {
         transactionList.filter { it.tujuan == selectedUser!!.id }
@@ -222,20 +225,18 @@ fun CompleteTransactionTable(
             userList = users
         }
     }
-
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Lokasi", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("Nama User", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("Actions", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+    }
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Lokasi", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Nama User", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Actions", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            }
-        }
         item {
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 4.dp),

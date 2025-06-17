@@ -51,14 +51,15 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fp_imk_admin.LoadingScreen
 import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.TransactionSessionManager
+import com.example.fp_imk_admin.UserSearchDropdown
 import com.example.fp_imk_admin.UserSessionManager
 import com.example.fp_imk_admin.data.Location
 import com.example.fp_imk_admin.data.Transaction
 import com.example.fp_imk_admin.data.User
 import com.example.fp_imk_admin.data.dummyLocs
-import com.example.fp_imk_admin.manajemen_lokasi.LoadingScreen
 import com.google.firebase.auth.FirebaseAuth
 
 class PendingTransListActivity : ComponentActivity() {
@@ -126,6 +127,10 @@ fun PendingTransListScreen(
 
     val currUser: User = userList.find { it.id == uid } ?: userList.first()
 
+    if (currUser.role == "karyawan") {
+        selectedLocation = locList.find { it.id == currUser.lokasiID }
+    }
+
     var filteredTransactions = if (selectedUser != null) {
         transactionList.filter { it.tujuan == selectedUser!!.id }
     } else {
@@ -136,7 +141,7 @@ fun PendingTransListScreen(
     } else {
         filteredTransactions
     }
-    filteredTransactions = transactionList.filter { it.nominal == 0 }
+    filteredTransactions = filteredTransactions.filter { it.nominal == 0 }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -174,6 +179,7 @@ fun PendingTransListScreen(
         },
         floatingActionButtonPosition = FabPosition.End
     ) { innerPadding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -215,7 +221,9 @@ fun PendingTransListScreen(
                     context.startActivity(intent)
                     (context as Activity?)?.finish()
                 },
-                onDelete = {  }
+                onDelete = {
+
+                }
             )
         }
     }
@@ -241,20 +249,19 @@ fun PendingTransactionTable(
             userList = users
         }
     }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Lokasi", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("Nama User", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+        Text("Actions", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
+    }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Lokasi", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Nama User", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Actions", modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            }
-        }
         item {
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 4.dp),
@@ -313,68 +320,6 @@ fun PendingTransactionTable(
                 thickness = 2.dp,
                 color = Color.LightGray
             )
-        }
-    }
-}
-
-@Composable
-fun UserSearchDropdown(
-    userList: List<User>,
-    onUserSelected: (User?) -> Unit
-) {
-    var queryValue by remember { mutableStateOf(TextFieldValue("")) }
-
-    val filteredUsers = userList.filter {
-        it.username.contains(queryValue.text, ignoreCase = true)
-    }.take(5)
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = queryValue,
-            onValueChange = { queryValue = it },
-            label = { Text("Search Username") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            trailingIcon = {
-                if (queryValue.text.isNotEmpty()) {
-                    IconButton(onClick = {
-                        queryValue = TextFieldValue("")
-                        onUserSelected(null)
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Clear"
-                        )
-                    }
-                }
-            }
-        )
-
-        if (queryValue.text.isNotBlank() && filteredUsers.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp)
-                    .background(Color.White)
-            ) {
-                filteredUsers.forEach { user ->
-                    Text(
-                        text = user.username,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                val newText = user.username
-                                queryValue = TextFieldValue(
-                                    text = newText,
-                                    selection = TextRange(newText.length)
-                                )
-                                onUserSelected(user)
-                            }
-                            .padding(12.dp),
-                        fontSize = 16.sp
-                    )
-                }
-            }
         }
     }
 }

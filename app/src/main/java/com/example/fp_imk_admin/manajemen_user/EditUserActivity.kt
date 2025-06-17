@@ -21,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import com.example.fp_imk_admin.LoadingScreen
 import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.R
 import com.example.fp_imk_admin.UserSessionManager
@@ -48,19 +49,8 @@ fun EditUserPreview() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditUserScreen(userId: String) {
-    val context = LocalContext.current
-    var user by remember {mutableStateOf<User?>(null)}
-
-    var username by remember { mutableStateOf("") }
-    var user_role by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var noTelp by remember { mutableStateOf("") }
-    var balance by remember { mutableStateOf(0) }
-    var lokasiID by remember { mutableStateOf("") }
-
+    var user by remember { mutableStateOf<User?>(null) }
     var locations by remember { mutableStateOf<List<Location>>(emptyList()) }
-    var selectedLocation by remember { mutableStateOf<Location?>(null) }
-
 
     LaunchedEffect(Unit) {
         UserSessionManager.getUserData(userId) { fetchedUser ->
@@ -68,26 +58,39 @@ fun EditUserScreen(userId: String) {
                 user = fetchedUser
             }
         }
-        if(user?.role != "user") {
-            LocationSessionManager.getAllLocations(
-                onSuccess = { fetchedLocations ->
-                    locations = if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
-                    if (fetchedLocations.isNotEmpty()) {
-                        selectedLocation = locations[0]
-                    }
-                },
-                onError = {
-                }
-            )
-        }
+        LocationSessionManager.getAllLocations(
+            onSuccess = { fetchedLocations ->
+                locations = if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
+            },
+            onError = {
+            }
+        )
     }
+    if(locations.isEmpty() || user == null) {
+        LoadingScreen()
+    } else {
+        EditUserScreenContent(user!!, locations)
+    }
+}
 
-    username = user?.username ?: ""
-    email = user?.email ?: ""
-    noTelp = user?.noTelp ?: ""
-    user_role = user?.role ?: "employee"
-    balance = user?.balance ?: 0
-    lokasiID = user?.lokasiID ?: ""
+@Composable
+fun EditUserScreenContent(user: User, locations: List<Location>) {
+    val context = LocalContext.current
+    var username by remember { mutableStateOf("") }
+    var user_role by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var noTelp by remember { mutableStateOf("") }
+    var balance by remember { mutableStateOf(0) }
+    var lokasiID by remember { mutableStateOf("") }
+
+    var selectedLocation by remember { mutableStateOf<Location?>(locations[0]) }
+
+    username = user.username
+    email = user.email
+    noTelp = user.noTelp
+    user_role = user.role
+    balance = user.balance
+    lokasiID = user.lokasiID
 
     fun isFormValid(): Boolean {
         val fieldsFilled = username.isNotBlank() && email.isNotBlank()
@@ -97,13 +100,11 @@ fun EditUserScreen(userId: String) {
 
     fun editUser() {
         var loc_id = ""
-        if(user_role != "user") {
+        if(user_role == "karyawan") {
             loc_id = selectedLocation?.id ?: ""
-        } else {
-//            loc_id =
         }
         val user = User(
-            id = userId,
+            id = user.id,
             username = username,
             email = email,
             noTelp = noTelp,
@@ -208,7 +209,7 @@ fun EditUserScreen(userId: String) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        if(user_role != "user") {
+        if(user_role == "karyawan") {
             LocationDropdown(
                 locations = locations,
                 selectedLocation = selectedLocation,

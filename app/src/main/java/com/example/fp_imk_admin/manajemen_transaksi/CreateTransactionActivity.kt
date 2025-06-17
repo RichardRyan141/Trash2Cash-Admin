@@ -41,6 +41,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
+import com.example.fp_imk_admin.LoadingScreen
 import com.example.fp_imk_admin.LocationSessionManager
 import com.example.fp_imk_admin.TransactionSessionManager
 import com.example.fp_imk_admin.UserSessionManager
@@ -48,6 +49,7 @@ import com.example.fp_imk_admin.data.Location
 import com.example.fp_imk_admin.data.Transaction
 import com.example.fp_imk_admin.data.User
 import com.example.fp_imk_admin.data.dummyLocs
+import com.google.firebase.auth.FirebaseAuth
 
 class CreateTransactionActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,37 +67,68 @@ fun CreateTransactionPreview() {
     CreateTransactionScreen()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateTransactionScreen(role: String = "admin") {
-    val context = LocalContext.current
-    var noTelp by remember { mutableStateOf("") }
-    var user by remember {mutableStateOf(User())}
-    var userFound by remember { mutableStateOf(false) }
-
     var locations by remember { mutableStateOf<List<Location>>(emptyList()) }
     var selectedLocation by remember { mutableStateOf<Location?>(null) }
 
-    LaunchedEffect(Unit) {
-        LocationSessionManager.getAllLocations(
-            onSuccess = { fetchedLocations ->
-                locations = if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
-                selectedLocation = locations.first()
-                if (user.lokasiID.isNotEmpty()) {
-                    selectedLocation = locations.find { it.id == user.lokasiID } ?: locations.first()
+    val auth = FirebaseAuth.getInstance()
+    val uid = auth.currentUser?.uid
+    var user by remember { mutableStateOf<User?>(null) }
+
+    LaunchedEffect(uid) {
+        uid?.let { userId ->
+            UserSessionManager.getUserData(userId) { fetchedUser ->
+                fetchedUser?.let { userData ->
+                    user = userData
+                    LocationSessionManager.getAllLocations(
+                        onSuccess = { fetchedLocations ->
+                            val locs =
+                                if (fetchedLocations.isNotEmpty()) fetchedLocations else dummyLocs
+                            val userLocId = userData.lokasiID
+                            selectedLocation = locs.firstOrNull()
+
+                            if (userLocId.isNotEmpty()) {
+                                val match = locs.find { it.id == userLocId }
+                                match?.let {
+                                    selectedLocation = it
+                                    locations = listOf(it)
+                                } ?: run {
+                                    locations = locs
+                                }
+                            } else {
+                                locations = locs
+                            }
+                        },
+                        onError = {
+                        }
+                    )
                 }
-            },
-            onError = {
             }
-        )
+        }
     }
+
+    if (user == null || locations.isEmpty()) {
+        LoadingScreen()
+    } else {
+        CreateTransactionScreenContent(user!!, locations)
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateTransactionScreenContent(employee: User, locations: List<Location>) {
+    val context = LocalContext.current
+    var noTelp by remember { mutableStateOf("") }
+    var userFound by remember { mutableStateOf(false) }
+    var selectedLocation by remember { mutableStateOf<Location>(locations.first()) }
+    var user by remember { mutableStateOf<User?>(null) }
 
     fun buatTransaksi() {
         selectedLocation?.let { loc ->
             val trans = Transaction(
                 masuk = true,
                 sumber = loc.namaLokasi,
-                tujuan = user.id,
+                tujuan = user!!.id,
                 loc_id = loc.id ?: ""
             )
 
@@ -145,7 +178,7 @@ fun CreateTransactionScreen(role: String = "admin") {
                 .padding(horizontal = 12.dp, vertical = 16.dp)
                 .fillMaxWidth()
         ) {
-            if (role != "karyawan") {
+            if (employee.role == "admin") {
                 Text(
                     text = "Lokasi",
                     fontSize = 32.sp,
@@ -204,7 +237,7 @@ fun CreateTransactionScreen(role: String = "admin") {
             }
             if (userFound) {
                 OutlinedTextField(
-                    value = user.username,
+                    value = user!!.username,
                     onValueChange = {},
                     label = { Text("Nama User") },
                     modifier = Modifier.fillMaxWidth(),

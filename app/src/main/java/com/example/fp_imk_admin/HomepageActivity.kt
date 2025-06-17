@@ -60,6 +60,7 @@ import com.example.fp_imk_admin.manajemen_lokasi.ListLocationActivity
 import com.example.fp_imk_admin.manajemen_transaksi.CompleteTransListActivity
 import com.example.fp_imk_admin.manajemen_transaksi.CreateTransactionActivity
 import com.example.fp_imk_admin.manajemen_transaksi.PendingTransListActivity
+import com.example.fp_imk_admin.manajemen_user.UserListScreenContent
 
 class HomepageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,7 +77,6 @@ fun HomeScreen() {
     val auth = FirebaseAuth.getInstance()
     val uid = auth.currentUser?.uid
     var user by remember {mutableStateOf<User?>(null)}
-    var user_role = ""
 
     LaunchedEffect(uid) {
         if (uid != null) {
@@ -88,8 +88,15 @@ fun HomeScreen() {
         }
     }
 
-    user_role = user?.role ?: "employee"
+    if(user == null) {
+        LoadingScreen()
+    } else {
+        HomeScreenContent(user!!)
+    }
+}
 
+@Composable
+fun HomeScreenContent(user: User) {
     Column(modifier = Modifier.fillMaxSize()) {
         header(user)
 
@@ -101,7 +108,7 @@ fun HomeScreen() {
         ) {
             item {
                 manajemen_user()
-                if (user_role != "employee") {
+                if (user.role == "admin") {
                     manajemen_lokasi()
                     laporan()
                     manajemen_kategori()

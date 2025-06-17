@@ -3,6 +3,7 @@ package com.example.fp_imk_admin.manajemen_user
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -44,8 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.fp_imk_admin.LoadingScreen
 import com.example.fp_imk_admin.UserSessionManager
 import com.example.fp_imk_admin.data.User
+import com.google.firebase.auth.FirebaseAuth
 
 class UserListActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,21 +67,48 @@ fun UserListPreview() {
     UserListScreen()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserListScreen() {
-    val context = LocalContext.current
-    var dispUser by remember { mutableStateOf(true) }
-    var dispEmpl by remember { mutableStateOf(true) }
-    var dispAdmin by remember { mutableStateOf(true) }
-
     var allUsers by remember { mutableStateOf<List<User>>(emptyList()) }
 
-    LaunchedEffect(Unit) {
+    val auth = FirebaseAuth.getInstance()
+    val uid = auth.currentUser?.uid
+    var user by remember {mutableStateOf<User?>(null)}
+
+    fun loadUsers() {
         UserSessionManager.getAllUsers { users ->
             allUsers = users
         }
     }
+
+    LaunchedEffect(uid) {
+        if (uid != null) {
+            UserSessionManager.getUserData(uid) { fetchedUser ->
+                if (fetchedUser != null) {
+                    user = fetchedUser
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        loadUsers()
+    }
+
+    if(allUsers.isEmpty() || user == null) {
+        LoadingScreen()
+    } else {
+        UserListScreenContent(user!!.role, allUsers, onRefresh = { loadUsers() })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UserListScreenContent(employee_role: String, allUsers: List<User>, onRefresh: () -> Unit) {
+    val context = LocalContext.current
+    var dispUser by remember { mutableStateOf(true) }
+    var dispEmpl by remember { mutableStateOf(true) }
+    var dispAdmin by remember { mutableStateOf(true) }
 
     val filteredUsers = remember(dispUser, dispEmpl, dispAdmin, allUsers) {
         allUsers.filter {
@@ -129,13 +159,14 @@ fun UserListScreen() {
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Text(
-                text = "Role",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            if (employee_role == "admin") {
+                Text(
+                    text = "Role",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "User",
                         fontSize = 20.sp,
@@ -147,30 +178,34 @@ fun UserListScreen() {
                         modifier = Modifier.scale(1.5f)
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Karyawan",
-                        fontSize = 20.sp,
-                        modifier = Modifier.padding(horizontal=8.dp)
-                    )
-                    Checkbox(
-                        checked = dispEmpl,
-                        onCheckedChange = { dispEmpl = it },
-                        modifier = Modifier.scale(1.5f)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Karyawan",
+                            fontSize = 20.sp,
+                            modifier = Modifier.padding(horizontal=8.dp)
+                        )
+                        Checkbox(
+                            checked = dispEmpl,
+                            onCheckedChange = { dispEmpl = it },
+                            modifier = Modifier.scale(1.5f)
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Admin",
+                            fontSize = 20.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        Checkbox(
+                            checked = dispAdmin,
+                            onCheckedChange = { dispAdmin = it },
+                            modifier = Modifier.scale(1.5f)
+                        )
+                    }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Admin",
-                        fontSize = 20.sp,
-                        modifier = Modifier.padding(horizontal=8.dp)
-                    )
-                    Checkbox(
-                        checked = dispAdmin,
-                        onCheckedChange = { dispAdmin = it },
-                        modifier = Modifier.scale(1.5f)
-                    )
-                }
+            } else {
+                dispEmpl = false
+                dispAdmin = false
             }
 
             UserTable(
@@ -180,7 +215,16 @@ fun UserListScreen() {
                     intent.putExtra("USER_ID", user.id)
                     context.startActivity(intent)
                 },
-                onDelete = {  }
+                onDelete = { user ->
+                    UserSessionManager.deleteUser(user) { success, error ->
+                        if (success) {
+                            Toast.makeText(context, "User berhasil dihapus", Toast.LENGTH_SHORT).show()
+                            onRefresh()
+                        } else {
+                            Toast.makeText(context, "User gagal dihapus:  $error", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             )
         }
     }

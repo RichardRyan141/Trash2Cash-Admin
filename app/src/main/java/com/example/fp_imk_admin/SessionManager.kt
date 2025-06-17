@@ -98,7 +98,7 @@ object UserSessionManager {
                     dbRef.get()
                         .addOnSuccessListener { snapshot ->
                             val role = snapshot.child("role").getValue(String::class.java)
-                            if (role != "user") {
+                            if (role != null && !role.contains("user")) {
                                 onResult(true, null)
                             } else {
                                 auth.signOut()
@@ -172,6 +172,28 @@ object UserSessionManager {
 
     fun logout() {
         FirebaseAuth.getInstance().signOut()
+    }
+
+    fun deleteUser(user: User, onResult: (Boolean, String?) -> Unit) {
+        val usersRef = FirebaseDatabase.getInstance().getReference("users").child(user.id)
+
+        val updatedUser = mapOf(
+            "username" to user.username,
+            "email" to user.email,
+            "noTelp" to "",
+            "role" to "deleted user",
+            "balance" to user.balance,
+            "lokasiID" to user.lokasiID
+        )
+
+        usersRef.updateChildren(updatedUser)
+            .addOnSuccessListener {
+                onResult(true, null)
+            }
+            .addOnFailureListener { exception ->
+                onResult(false, "Gagal menghapus user: ${exception.message}")
+            }
+
     }
 }
 
@@ -443,7 +465,6 @@ object TransactionSessionManager {
                 callback(false, "Failed to save transaction details: ${e.message}")
             }
     }
-
 
     fun updateTransactionNominal(transID: String, updatedTransaction: Transaction, callback: (Boolean) -> Unit) {
         val dbRef = FirebaseDatabase.getInstance().getReference("transactions").child(transID)
