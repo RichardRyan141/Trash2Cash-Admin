@@ -177,6 +177,28 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".manajemen_laporan.LaporanPenjualanActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.FP_IMK_Admin">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".manajemen_laporan.LaporanTransferActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.FP_IMK_Admin">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

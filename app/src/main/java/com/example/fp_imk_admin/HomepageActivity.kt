@@ -55,6 +55,8 @@ import com.google.firebase.auth.FirebaseAuth
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.fp_imk_admin.manajemen_laporan.LaporanPenjualanActivity
+import com.example.fp_imk_admin.manajemen_laporan.LaporanTransferActivity
 import com.example.fp_imk_admin.manajemen_lokasi.AddLocationActivity
 import com.example.fp_imk_admin.manajemen_lokasi.ListLocationActivity
 import com.example.fp_imk_admin.manajemen_transaksi.CompleteTransListActivity
@@ -354,18 +356,22 @@ fun laporan() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                laporan_item(Color.Black, "Laporan Pembelian Sampah")
-                laporan_item(Color.Green, "Laporan Transfer")
+                laporan_item(Color.Black, "Laporan Pembelian Sampah", LaporanPenjualanActivity::class.java)
+                laporan_item(Color.Green, "Laporan Transfer", LaporanTransferActivity::class.java)
             }
         }
     }
 }
 
 @Composable
-fun laporan_item(image_color: Color, text: String) {
+fun laporan_item(image_color: Color, text: String, target: Class<*>) {
     val context = LocalContext.current
     Column(
-        modifier = Modifier.padding(8.dp),
+        modifier = Modifier
+            .padding(8.dp)
+            .clickable {
+                context.startActivity(Intent(context, target))
+            },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
