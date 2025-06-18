@@ -171,7 +171,7 @@ fun LaporanTransferScreenContent(locList: List<Location>, transList: List<Transa
 
     val perBulan = transList
         .filter {
-            it.masuk == true
+            it.masuk == false
         }
         .groupBy {
             val date = waktuFormatter.parse(it.waktu)
