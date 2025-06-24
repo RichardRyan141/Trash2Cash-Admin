@@ -111,14 +111,17 @@ fun HomeScreenContent(user: User) {
             item {
                 manajemen_user()
                 if (user.role == "admin") {
-                    manajemen_lokasi()
-                    laporan()
+                    manajemen_lokasi(user.role)
                     manajemen_kategori()
                 } else {
                     Spacer(modifier = Modifier.height(40.dp))
                 }
 
                 manajemen_transaksi()
+
+                if (user.role == "admin") {
+                    laporan()
+                }
             }
         }
     }
@@ -268,7 +271,7 @@ fun manajemen_user_item(image_color: Color, text: String, target: Class<*>) {
 }
 
 @Composable
-fun manajemen_lokasi() {
+fun manajemen_lokasi(role: String) {
     val context = LocalContext.current
     Surface(
         modifier = Modifier
@@ -295,7 +298,9 @@ fun manajemen_lokasi() {
                 horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                lokasi_item(Color.Black, "Tambah Lokasi", AddLocationActivity::class.java)
+                if (role == "admin") {
+                    lokasi_item(Color.Black, "Tambah Lokasi", AddLocationActivity::class.java)
+                }
                 lokasi_item(Color.Green, "Daftar Lokasi", ListLocationActivity::class.java)
             }
         }

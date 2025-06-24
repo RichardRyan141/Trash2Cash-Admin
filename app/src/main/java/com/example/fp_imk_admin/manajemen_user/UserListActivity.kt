@@ -3,6 +3,7 @@ package com.example.fp_imk_admin.manajemen_user
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -113,7 +114,7 @@ fun UserListScreenContent(employee_role: String, allUsers: List<User>, onRefresh
     val filteredUsers = remember(dispUser, dispEmpl, dispAdmin, allUsers) {
         allUsers.filter {
             (dispUser && it.role == "user") ||
-                    (dispEmpl && it.role == "employee") ||
+                    (dispEmpl && it.role == "karyawan") ||
                     (dispAdmin && it.role == "admin")
         }
     }

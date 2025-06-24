@@ -478,4 +478,27 @@ object TransactionSessionManager {
                 callback(false)
             }
     }
+
+    fun deleteTransaction(transaction: Transaction, onResult: (Boolean, String?) -> Unit) {
+        val transID = transaction.noRef
+        val dbRefTransaction = FirebaseDatabase.getInstance().getReference("transactions").child(transID)
+        val dbRefDetails = FirebaseDatabase.getInstance().getReference("transactionDetails").child(transID)
+
+        dbRefDetails.removeValue()
+            .addOnSuccessListener {
+                dbRefTransaction.removeValue()
+                    .addOnSuccessListener {
+                        onResult(true, null)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("Firebase", "Failed to delete transaction: ${e.message}", e)
+                        onResult(false, "Failed to delete transaction: ${e.message}")
+                    }
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Failed to delete transaction details: ${e.message}", e)
+                onResult(false, "Failed to delete transaction details: ${e.message}")
+            }
+    }
+
 }

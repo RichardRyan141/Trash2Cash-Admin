@@ -166,9 +166,6 @@ fun LaporanTransferScreenContent(locList: List<Location>, transList: List<Transa
     val perWallet = filtered.groupBy { it.tujuan.substringBefore(" ") }
         .mapValues { it.value.sumOf { t -> t.nominal } }
 
-    val perUser = filtered.groupBy { it.tujuan }
-        .mapValues { it.value.sumOf { t -> t.nominal } }
-
     val perBulan = transList
         .filter {
             it.masuk == false
@@ -187,7 +184,7 @@ fun LaporanTransferScreenContent(locList: List<Location>, transList: List<Transa
             TopAppBar(
                 title = {
                     Text(
-                        text = "Laporan Pembelian Sampah",
+                        text = "Laporan Transfer Saldo",
                         color = Color.Black,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -259,11 +256,11 @@ fun LaporanTransferScreenContent(locList: List<Location>, transList: List<Transa
                     perWallet,
                     "Pie"
                 )
-                ChartSection(
-                    "Laporan Per User",
-                    perUser.mapKeys { id -> userList.find { it.id == id.key }?.username ?: id.key },
-                    "Pie"
-                )
+//                ChartSection(
+//                    "Laporan Per User",
+//                    perUser.mapKeys { id -> userList.find { it.id == id.key }?.username ?: id.key },
+//                    "Pie"
+//                )
                 ChartSection("Laporan Per Bulan", perBulan, "VertBar")
 
                 Spacer(modifier = Modifier.height(48.dp))

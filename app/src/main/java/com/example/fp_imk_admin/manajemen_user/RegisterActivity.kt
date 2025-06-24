@@ -10,7 +10,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -159,6 +162,7 @@ fun RegisterScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreenContent(user_role: String, locations: List<Location>) {
     val context = LocalContext.current
@@ -173,6 +177,8 @@ fun RegisterScreenContent(user_role: String, locations: List<Location>) {
 
     var selectedLocation by remember { mutableStateOf<Location?>(null) }
     if (user_role == "karyawan") selectedLocation = locations[0]
+
+    val scrollState = rememberScrollState()
 
     fun isFormValid(): Boolean {
         val passwordValid = password.length >= 8 && password.any { it.isDigit() }
@@ -200,188 +206,213 @@ fun RegisterScreenContent(user_role: String, locations: List<Location>) {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Bottom,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.app_logo),
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            contentScale = ContentScale.Crop
-        )
-
-        Spacer(modifier = Modifier.height(30.dp))
-
-        Row {
-            Text(
-                text = "Buat ",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = Color(0xFFF1EBEB),
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Buat Pengguna",
+                        color = Color.Black,
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = { (context as Activity?)?.finish() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
             )
-            RoleDropdown(
-                employeeRole = user_role,
-                selectedRole = role,
-                onRoleSelected = { role = it }
-            )
-        }
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 24.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(10.dp))
+            Row {
+                Text(
+                    text = "Buat ",
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                RoleDropdown(
+                    employeeRole = user_role,
+                    selectedRole = role,
+                    onRoleSelected = { role = it }
+                )
+            }
 
-        if (role == "karyawan") {
-            LocationDropdown(
-                locations = locations,
-                selectedLocation = selectedLocation,
-                onLocationSelected = { selectedLocation = it }
+            Spacer(modifier = Modifier.height(10.dp))
+
+            if (role == "karyawan") {
+                LocationDropdown(
+                    locations = locations,
+                    selectedLocation = selectedLocation,
+                    onLocationSelected = { selectedLocation = it }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Masukkan Username") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
+            if (!username.isNotBlank()) {
+                Text(
+                    text = "Masukkan username",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
-        }
 
-        OutlinedTextField(
-            value = username,
-            onValueChange = { username = it },
-            label = { Text("Masukkan Username") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-        )
-        if (!username.isNotBlank()) {
-            Text(
-                text = "Masukkan username",
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp)
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Masukkan Email") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Masukkan Email") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-        )
-        if (!email.isNotBlank()) {
-            Text(
-                text = "Masukkan Email",
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = noTelp,
-            onValueChange = { noTelp = it },
-            label = { Text("Masukkan Nomor Telepon") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-        )
-        if (!noTelp.isNotBlank() || noTelp.length < 10) {
-            Text(
-                text = "Masukkan Nomor Telepon (min. 10 digit)",
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Masukkan Password") },
-            singleLine = true,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                val icon = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .clickable { passwordVisible = !passwordVisible }
-                        .padding(end = 8.dp)
+            if (!email.isNotBlank()) {
+                Text(
+                    text = "Masukkan Email",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-        )
-        if (password.length < 8 || !password.any { it.isDigit() }) {
-            Text(
-                text = "Password harus minimal 8 karakter dan mengandung angka",
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = noTelp,
+                onValueChange = { noTelp = it },
+                label = { Text("Masukkan Nomor Telepon") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = confirmPassword,
-            onValueChange = { confirmPassword = it },
-            label = { Text("Konfirmasi Password") },
-            singleLine = true,
-            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                val icon = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .clickable { confirmPasswordVisible = !confirmPasswordVisible }
-                        .padding(end = 8.dp)
+            if (!noTelp.isNotBlank() || noTelp.length < 10) {
+                Text(
+                    text = "Masukkan Nomor Telepon (min. 10 digit)",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp)
-        )
-        if (password != confirmPassword) {
-            Text(
-                text = "Password harus sama",
-                color = MaterialTheme.colorScheme.error,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 4.dp)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Masukkan Password") },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val icon =
+                        if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .clickable { passwordVisible = !passwordVisible }
+                            .padding(end = 8.dp)
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
+            if (password.length < 8 || !password.any { it.isDigit() }) {
+                Text(
+                    text = "Password harus minimal 8 karakter dan mengandung angka",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = { Text("Konfirmasi Password") },
+                singleLine = true,
+                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val icon =
+                        if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .clickable { confirmPasswordVisible = !confirmPasswordVisible }
+                            .padding(end = 8.dp)
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
+            )
+            if (password != confirmPassword) {
+                Text(
+                    text = "Password harus sama",
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = {
+                    registerUser()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = isFormValid()
+            ) {
+                Text("Buat ${role.replaceFirstChar { it.uppercaseChar() }}")
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            OutlinedButton(
+                onClick = { (context as? Activity)?.finish() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Kembali")
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = {
-                registerUser()
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = isFormValid()
-        ) {
-            Text("Buat ${role.replaceFirstChar { it.uppercaseChar() }}")
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        OutlinedButton(
-            onClick = { (context as? Activity)?.finish() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Kembali")
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
     }
 }

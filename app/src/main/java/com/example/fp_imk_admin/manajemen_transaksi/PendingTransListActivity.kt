@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -72,36 +73,40 @@ class PendingTransListActivity : ComponentActivity() {
         var usersState = mutableStateListOf<User>()
         var isUserLoaded = mutableStateOf(false)
 
-        TransactionSessionManager.getAllTransactions { transactions ->
-            transactionsState.clear()
-            transactionsState.addAll(transactions)
-            isTransLoaded.value = true
-        }
-        UserSessionManager.getAllUsers { users ->
-            usersState.clear()
-            usersState.addAll(users)
-            isUserLoaded.value = true
-        }
-        LocationSessionManager.getAllLocations(
-            onSuccess = { fetchedLocations ->
-                val allLocationsOption = Location(
-                    id = "ALL",
-                    namaLokasi = "Semua Lokasi"
-                )
-                locationsState.clear()
-                locationsState.add(allLocationsOption)
-                locationsState.addAll(fetchedLocations)
-                isLocLoaded.value = true
-            },
-            onError = { error ->
-                Log.e("LocationScreen", "Database error: ${error.message}")
-                isLocLoaded.value = true
+        fun loadTransactions() {
+            TransactionSessionManager.getAllTransactions { transactions ->
+                transactionsState.clear()
+                transactionsState.addAll(transactions)
+                isTransLoaded.value = true
             }
-        )
+            UserSessionManager.getAllUsers { users ->
+                usersState.clear()
+                usersState.addAll(users)
+                isUserLoaded.value = true
+            }
+            LocationSessionManager.getAllLocations(
+                onSuccess = { fetchedLocations ->
+                    val allLocationsOption = Location(
+                        id = "ALL",
+                        namaLokasi = "Semua Lokasi"
+                    )
+                    locationsState.clear()
+                    locationsState.add(allLocationsOption)
+                    locationsState.addAll(fetchedLocations)
+                    isLocLoaded.value = true
+                },
+                onError = { error ->
+                    Log.e("LocationScreen", "Database error: ${error.message}")
+                    isLocLoaded.value = true
+                }
+            )
+        }
+
+        loadTransactions()
 
         setContent {
             if (isLocLoaded.value && isTransLoaded.value && isUserLoaded.value && locationsState.isNotEmpty() && transactionsState.isNotEmpty() && usersState.isNotEmpty()) {
-                PendingTransListScreen(locationsState, transactionsState, usersState)
+                PendingTransListScreen(locationsState, transactionsState, usersState, onRefresh = { loadTransactions() })
             } else {
                 LoadingScreen()
             }
@@ -115,11 +120,12 @@ class PendingTransListActivity : ComponentActivity() {
 fun PendingTransListScreen(
     locationsState: SnapshotStateList<Location>,
     transactionsState: SnapshotStateList<Transaction>,
-    usersState: SnapshotStateList<User>
+    usersState: SnapshotStateList<User>,
+    onRefresh: () -> Unit
 ) {
     val context = LocalContext.current
     val uid = FirebaseAuth.getInstance().currentUser?.uid
-    var transactionList by remember { mutableStateOf(transactionsState.toList()) }
+    val transactionList: List<Transaction> = transactionsState
     var userList by remember { mutableStateOf(usersState.toList()) }
     var selectedUser by remember { mutableStateOf<User?>(null) }
     var locList by remember { mutableStateOf(locationsState.toList()) }
@@ -221,8 +227,15 @@ fun PendingTransListScreen(
                     context.startActivity(intent)
                     (context as Activity?)?.finish()
                 },
-                onDelete = {
-
+                onDelete = { transaction ->
+                    TransactionSessionManager.deleteTransaction(transaction) { success, message ->
+                        if (success) {
+                            Toast.makeText(context, "Transaction deleted successfully", Toast.LENGTH_SHORT).show()
+                            onRefresh()
+                        } else {
+                            Toast.makeText(context, "Error: $message", Toast.LENGTH_LONG).show()
+                        }
+                    }
                 }
             )
         }
@@ -233,7 +246,7 @@ fun PendingTransListScreen(
 fun PendingTransactionTable(
     transactions: List<Transaction>,
     onDetails: (Transaction) -> Unit,
-    onDelete: () -> Unit
+    onDelete: (Transaction) -> Unit
 ) {
     var locList by remember { mutableStateOf<List<Location>>(emptyList()) }
     var userList by remember { mutableStateOf<List<User>>(emptyList()) }
@@ -304,7 +317,7 @@ fun PendingTransactionTable(
                         )
                     }
                     Button(
-                        onClick = { onDelete() },
+                        onClick = { onDelete(trans) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                     ) {
                         Text(
